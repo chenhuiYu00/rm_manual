@@ -11,6 +11,10 @@ ChassisGimbalShooterCoverManual::ChassisGimbalShooterCoverManual(ros::NodeHandle
 {
   ros::NodeHandle cover_nh(nh, "cover");
   nh.param("supply_frame", supply_frame_, std::string("supply_frame"));
+  if (nh.getParam("flank_frame", flank_frame_))
+  {
+    need_flank_ = true;
+  }
   cover_command_sender_ = new rm_common::JointPositionBinaryCommandSender(cover_nh);
   XmlRpc::XmlRpcValue rpc_value;
   nh.getParam("gimbal_calibration", rpc_value);
@@ -18,6 +22,7 @@ ChassisGimbalShooterCoverManual::ChassisGimbalShooterCoverManual(ros::NodeHandle
   ctrl_z_event_.setEdge(boost::bind(&ChassisGimbalShooterCoverManual::ctrlZPress, this),
                         boost::bind(&ChassisGimbalShooterCoverManual::ctrlZRelease, this));
   ctrl_q_event_.setRising(boost::bind(&ChassisGimbalShooterCoverManual::ctrlQPress, this));
+  r_event_.setRising(boost::bind(&ChassisGimbalShooterCoverManual::rPress, this));
 }
 
 void ChassisGimbalShooterCoverManual::run()
@@ -43,6 +48,7 @@ void ChassisGimbalShooterCoverManual::checkKeyboard(const rm_msgs::DbusData::Con
   ChassisGimbalShooterManual::checkKeyboard(dbus_data);
   ctrl_z_event_.update(dbus_data->key_ctrl & dbus_data->key_z);
   ctrl_q_event_.update(dbus_data->key_ctrl & dbus_data->key_q);
+  r_event_.update(dbus_data->key_r);
 }
 
 void ChassisGimbalShooterCoverManual::sendCommand(const ros::Time& time)
@@ -65,6 +71,11 @@ void ChassisGimbalShooterCoverManual::sendCommand(const ros::Time& time)
     {
       ROS_WARN("%s", ex.what());
     }
+  }
+  else if (need_flank_ && flank_)
+  {
+    chassis_cmd_sender_->getMsg()->follow_source_frame = flank_frame_;
+    chassis_cmd_sender_->setMode(rm_msgs::ChassisCmd::FOLLOW);
   }
   else
   {
@@ -91,6 +102,10 @@ void ChassisGimbalShooterCoverManual::sendCommand(const ros::Time& time)
       {
         ROS_WARN("%s", ex.what());
       }
+    }
+    else
+    {
+      chassis_cmd_sender_->getMsg()->follow_source_frame = "yaw";
     }
   }
   ChassisGimbalShooterManual::sendCommand(time);
@@ -131,6 +146,11 @@ void ChassisGimbalShooterCoverManual::rightSwitchUpRise()
 {
   ChassisGimbalShooterManual::rightSwitchUpRise();
   supply_ = false;
+}
+
+void ChassisGimbalShooterCoverManual::rPress()
+{
+  flank_ = !flank_;
 }
 
 void ChassisGimbalShooterCoverManual::ctrlZPress()

@@ -25,6 +25,7 @@ protected:
   void rightSwitchDownRise() override;
   void rightSwitchMidRise() override;
   void rightSwitchUpRise() override;
+  void rPress();
   void ctrlZPress();
   void ctrlZRelease()
   {
@@ -33,9 +34,9 @@ protected:
   void ctrlQPress();
   rm_common::JointPositionBinaryCommandSender* cover_command_sender_{};
   rm_common::CalibrationQueue* gimbal_calibration_;
-  InputEvent ctrl_z_event_, ctrl_q_event_;
-  std::string supply_frame_;
-  bool supply_ = false;
-  bool cover_close_ = true;
+  InputEvent ctrl_z_event_, ctrl_q_event_, r_event_;
+  std::string supply_frame_, flank_frame_;
+  bool supply_ = false, flank_ = false;
+  bool cover_close_ = true, need_flank_ = false;
 };
 }  // namespace rm_manual
