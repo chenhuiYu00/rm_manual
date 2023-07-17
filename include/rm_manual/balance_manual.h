@@ -14,6 +14,7 @@ public:
   BalanceManual(ros::NodeHandle& nh, ros::NodeHandle& nh_referee);
 
 protected:
+  void run() override;
   void updateRc(const rm_msgs::DbusData::ConstPtr& dbus_data) override;
   void wPress() override;
   void sPress() override;
@@ -28,11 +29,15 @@ protected:
   void dPressing() override;
   void bPress() override;
   void ctrlZPress() override;
+  void ctrlQPress() override;
   void rightSwitchDownRise() override;
   void rightSwitchMidRise() override;
 
   void sendCommand(const ros::Time& time) override;
   void checkKeyboard(const rm_msgs::DbusData::ConstPtr& dbus_data) override;
+  void chassisOutputOn() override;
+  void remoteControlTurnOff() override;
+  void remoteControlTurnOn() override;
   void vPress();
   void ctrlXPress();
   void modeFallen(ros::Duration duration);
@@ -40,13 +45,12 @@ protected:
   rm_common::BalanceCommandSender* balance_cmd_sender_{};
 
 private:
-  void balanceStateCallback(const rm_msgs::BalanceState::ConstPtr& msg);
-
   ros::Subscriber state_sub_;
   double balance_dangerous_angle_;
 
   bool flank_ = false, reverse_ = false;
   std::string flank_frame_, reverse_frame_;
+  rm_common::CalibrationQueue* chassis_calibration_;
 
   InputEvent v_event_, ctrl_x_event_, auto_fallen_event_;
 };

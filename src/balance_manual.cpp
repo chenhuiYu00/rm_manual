@@ -17,14 +17,25 @@ BalanceManual::BalanceManual(ros::NodeHandle& nh, ros::NodeHandle& nh_referee)
   nh.param("reverse_frame", reverse_frame_, std::string("yaw_reverse_frame"));
   nh.param("balance_dangerous_angle", balance_dangerous_angle_, 0.3);
 
+  XmlRpc::XmlRpcValue rpc_value;
+  nh.getParam("chassis_calibration", rpc_value);
+  chassis_calibration_ = new rm_common::CalibrationQueue(rpc_value, nh, controller_manager_);
+
   is_balance_ = true;
-  state_sub_ = balance_nh.subscribe<rm_msgs::BalanceState>("/state", 1, &BalanceManual::balanceStateCallback, this);
+  flank_ = true;
+
   x_event_.setRising(boost::bind(&BalanceManual::xPress, this));
   g_event_.setRising(boost::bind(&BalanceManual::gPress, this));
   v_event_.setRising(boost::bind(&BalanceManual::vPress, this));
   auto_fallen_event_.setActiveHigh(boost::bind(&BalanceManual::modeFallen, this, _1));
   auto_fallen_event_.setDelayTriggered(boost::bind(&BalanceManual::modeNormalize, this), 1.5, true);
   ctrl_x_event_.setRising(boost::bind(&BalanceManual::ctrlXPress, this));
+}
+
+void BalanceManual::run()
+{
+  ChassisGimbalShooterCoverManual::run();
+  chassis_calibration_->update(ros::Time::now());
 }
 
 void BalanceManual::sendCommand(const ros::Time& time)
@@ -220,17 +231,28 @@ void BalanceManual::ctrlXPress()
     balance_cmd_sender_->setBalanceMode(rm_msgs::BalanceState::NORMAL);
 }
 
-void BalanceManual::balanceStateCallback(const rm_msgs::BalanceState::ConstPtr& msg)
+void BalanceManual::ctrlQPress()
 {
-  if ((ros::Time::now() - msg->header.stamp).toSec() < 0.2)
-  {
-    if (std::abs(msg->theta) > balance_dangerous_angle_)
-      chassis_cmd_sender_->power_limit_->updateState(rm_common::PowerLimit::BURST);
-    if (msg->mode == rm_msgs::BalanceState::NORMAL)
-      auto_fallen_event_.update(std::abs(msg->theta) > 0.42 && std::abs(msg->x_dot) > 1.5 &&
-                                vel_cmd_sender_->getMsg()->linear.x == 0 && vel_cmd_sender_->getMsg()->linear.y == 0 &&
-                                vel_cmd_sender_->getMsg()->angular.z == 0);
-  }
+  ChassisGimbalShooterCoverManual::ctrlQPress();
+  chassis_calibration_->reset();
+}
+
+void BalanceManual::chassisOutputOn()
+{
+  ChassisGimbalShooterCoverManual::chassisOutputOn();
+  chassis_calibration_->reset();
+}
+
+void BalanceManual::remoteControlTurnOn()
+{
+  ChassisGimbalShooterCoverManual::remoteControlTurnOn();
+  chassis_calibration_->stopController();
+}
+
+void BalanceManual::remoteControlTurnOff()
+{
+  ChassisGimbalShooterCoverManual::remoteControlTurnOff();
+  chassis_calibration_->stop();
 }
 
 void BalanceManual::modeNormalize()
