@@ -28,6 +28,7 @@ protected:
   void sPressing() override;
   void dPressing() override;
   void bPress() override;
+  void vPress() override;
   void ctrlZPress() override;
   void ctrlQPress() override;
   void rightSwitchDownRise() override;
@@ -38,7 +39,6 @@ protected:
   void chassisOutputOn() override;
   void remoteControlTurnOff() override;
   void remoteControlTurnOn() override;
-  void vPress();
   void ctrlXPress();
   void modeFallen(ros::Duration duration);
   void modeNormalize();
