@@ -75,7 +75,7 @@ void ManualBase::checkReferee()
 {
   gimbal_power_on_event_.update(gimbal_output_on_);
   shooter_power_on_event_.update(shooter_output_on_);
-  referee_is_online_ = (ros::Time::now() - referee_last_get_stamp_ < ros::Duration(0.3));
+  referee_is_online_ = (ros::Time::now() - referee_last_get_stamp_ < ros::Duration(2.0));
   manual_to_referee_pub_.publish(manual_to_referee_pub_data_);
 }
 
@@ -114,9 +114,17 @@ void ManualBase::dbusDataCallback(const rm_msgs::DbusData::ConstPtr& data)
   {
     if (!remote_is_open_)
     {
-      ROS_INFO("Remote controller ON");
-      remoteControlTurnOn();
-      remote_is_open_ = true;
+      if (!gimbal_output_on_ || !shooter_output_on_)
+      {
+        ROS_INFO_THROTTLE(5, "Remote controller wait for Server");
+        return;
+      }
+      else
+      {
+        ROS_INFO("Remote controller ON");
+        remoteControlTurnOn();
+        remote_is_open_ = true;
+      }
     }
     right_switch_down_event_.update(data->s_r == rm_msgs::DbusData::DOWN);
     right_switch_mid_event_.update(data->s_r == rm_msgs::DbusData::MID);
