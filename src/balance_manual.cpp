@@ -57,6 +57,8 @@ void BalanceManual::checkKeyboard(const rm_msgs::DbusData::ConstPtr& dbus_data)
   ChassisGimbalShooterCoverManual::checkKeyboard(dbus_data);
   v_event_.update(dbus_data->key_v && !dbus_data->key_ctrl);
   ctrl_x_event_.update(dbus_data->key_ctrl && dbus_data->key_x);
+  ctrl_w_event_.update(dbus_data->key_w && dbus_data->key_ctrl);
+  ctrl_s_event_.update(dbus_data->key_s && dbus_data->key_ctrl);
 }
 
 void BalanceManual::updateRc(const rm_msgs::DbusData::ConstPtr& dbus_data)
@@ -139,7 +141,7 @@ void BalanceManual::wPressing()
   if (flank_)
     flank_ = !flank_;
   ChassisGimbalShooterCoverManual::wPressing();
-  if (supply_)
+  if (supply_ || chassis_cmd_sender_->getMsg()->mode == rm_msgs::ChassisCmd::FALLEN)
     vel_cmd_sender_->setLinearXVel(x_scale_ * 0.4);
 }
 
@@ -157,7 +159,7 @@ void BalanceManual::sPressing()
   if (flank_)
     flank_ = !flank_;
   ChassisGimbalShooterCoverManual::sPressing();
-  if (supply_)
+  if (supply_ || chassis_cmd_sender_->getMsg()->mode == rm_msgs::ChassisCmd::FALLEN)
     vel_cmd_sender_->setLinearXVel(x_scale_ * 0.4);
 }
 
@@ -173,7 +175,7 @@ void BalanceManual::aPressing()
   if (!flank_)
     flank_ = !flank_;
   ChassisGimbalShooterCoverManual::aPressing();
-  if (supply_)
+  if (supply_ || chassis_cmd_sender_->getMsg()->mode == rm_msgs::ChassisCmd::FALLEN)
     vel_cmd_sender_->setLinearYVel(y_scale_ * 0.4);
 }
 
@@ -189,8 +191,19 @@ void BalanceManual::dPressing()
   if (!flank_)
     flank_ = !flank_;
   ChassisGimbalShooterCoverManual::dPressing();
-  if (supply_)
+  if (supply_ || chassis_cmd_sender_->getMsg()->mode == rm_msgs::ChassisCmd::FALLEN)
     vel_cmd_sender_->setLinearYVel(y_scale_ * 0.4);
+}
+
+void BalanceManual::ctrlRPress()
+{
+  if (chassis_cmd_sender_->getMsg()->mode == rm_msgs::ChassisCmd::FOLLOW)
+    chassis_cmd_sender_->setMode(rm_msgs::ChassisCmd::FALLEN);
+  else
+  {
+    chassis_cmd_sender_->setMode(rm_msgs::ChassisCmd::FOLLOW);
+    chassis_cmd_sender_->power_limit_->updateState(rm_common::PowerLimit::BURST);
+  }
 }
 
 void BalanceManual::cPress()
