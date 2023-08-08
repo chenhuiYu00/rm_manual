@@ -25,6 +25,8 @@ BalanceManual::BalanceManual(ros::NodeHandle& nh, ros::NodeHandle& nh_referee)
   auto_fallen_event_.setActiveHigh(boost::bind(&BalanceManual::modeFallen, this, _1));
   auto_fallen_event_.setDelayTriggered(boost::bind(&BalanceManual::modeNormalize, this), 1.5, true);
   ctrl_x_event_.setRising(boost::bind(&BalanceManual::ctrlXPress, this));
+
+  chassis_cmd_sender_->power_limit_->updateState(rm_common::PowerLimit::BURST);
 }
 
 void BalanceManual::sendCommand(const ros::Time& time)
@@ -94,7 +96,6 @@ void BalanceManual::ctrlZPress()
   {
     balance_cmd_sender_->setBalanceMode(rm_msgs::BalanceState::FALLEN);
     chassis_cmd_sender_->setMode(rm_msgs::ChassisCmd::FALLEN);
-    chassis_cmd_sender_->power_limit_->updateState(rm_common::PowerLimit::CHARGE);
   }
   else
   {
@@ -131,8 +132,6 @@ void BalanceManual::wPress()
 {
   if (flank_)
     flank_ = !flank_;
-  if (!supply_)
-    chassis_cmd_sender_->power_limit_->updateState(rm_common::PowerLimit::BURST);
   ChassisGimbalShooterCoverManual::wPress();
 }
 
@@ -149,8 +148,6 @@ void BalanceManual::sPress()
 {
   if (flank_)
     flank_ = !flank_;
-  if (!supply_)
-    chassis_cmd_sender_->power_limit_->updateState(rm_common::PowerLimit::BURST);
   ChassisGimbalShooterCoverManual::sPress();
 }
 
